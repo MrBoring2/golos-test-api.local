@@ -1,0 +1,1 @@
+# golos-test-api
