@@ -20,6 +20,10 @@ class ComposerStaticInit026509606a55be5c56c243e48adc6597
             'Slim\\' => 5,
             'Selective\\BasePath\\' => 19,
         ),
+        'R' => 
+        array (
+            'Repositories\\' => 13,
+        ),
         'P' => 
         array (
             'Psr\\Log\\' => 8,
@@ -58,6 +62,10 @@ class ComposerStaticInit026509606a55be5c56c243e48adc6597
         'Selective\\BasePath\\' => 
         array (
             0 => __DIR__ . '/..' . '/selective/basepath/src',
+        ),
+        'Repositories\\' => 
+        array (
+            0 => __DIR__ . '/../..' . '/src/repositories',
         ),
         'Psr\\Log\\' => 
         array (
