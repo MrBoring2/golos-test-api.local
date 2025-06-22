@@ -24,15 +24,19 @@ class FlatsRepository implements IRepository {
                         images.Type as ImageType,
                         images.Path as ImagePath
                         FROM Flats flats
-                        JOIN FlatImages images ON images.FlatId = flats.Id";
+                        JOIN FlatImages images ON images.FlatId = flats.Id
+                        WHERE ";
+     
         try {
         $db = new DB();
         $conn = $db->connect();
-        $stmt = $conn->query($sql);
+        $stmt = $conn->prepare($sql);
+
         $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return self::computeImages($flats);
         }
         catch (PDOException $e) {
+            //echo $e->getMessage();
             return [];
         } finally {
             $db = null;
@@ -41,6 +45,107 @@ class FlatsRepository implements IRepository {
 
     public function GetAllWithFilter($filterArray) {
 
+        $filters = [
+            'MinArea' => $filterArray['min_area'] ?? null,
+            'MaxArea' => $filterArray['max_area'] ?? null,
+            'Rooms' => $filterArray['rooms'] ?? [],
+            'MinPrice' => $filterArray['min_price'] ?? null,
+            'MaxPrice' => $filterArray['max_price'] ?? null,
+            'MinFloor'=> $filterArray['min_floor'] ?? null,
+            'MaxFloor'=> $filterArray['max_floor'] ?? null,
+            'OrderBy' => $filterArray['order_by'] ?? null
+        ];
+
+        $sql = "SELECT BIN_TO_UUID(flats.Id) as Id, 
+                        flats.Floor,
+                        flats.Type,
+                        flats.Area,
+                        flats.Roominess,
+                        flats.Price,
+                        flats.Number,
+                        flats.Housing,
+                        flats.Section,
+                        flats.Floor,
+                        BIN_TO_UUID(images.Id) as ImageId,
+                        images.Type as ImageType,
+                        images.Path as ImagePath
+                        FROM Flats flats
+                        JOIN FlatImages images ON images.FlatId = flats.Id";
+
+        $params = [];
+
+        foreach ($filters as $key => $value) {
+            if($value === null) continue;
+
+            if($key === 'MinArea' && $filters[$key] != null){
+                $sql .= " AND flats.Area >= ?";
+                $params[] = $value;
+            }
+            else if ($key === 'MaxArea'  && $filters[$key] != null){
+                $sql .= " AND flats.Area <= ?";
+                $params[] = $value; 
+            }
+            else if ($key === 'Rooms'  && !empty($filters[$key])){
+                $rooms = is_array($filters['Rooms']) ? $filters['Rooms'] : [$filters['Rooms']];
+                $sql .= " AND flats.Roominess IN (" . str_repeat('?,', count($rooms) - 1) . '?)';
+                $params = array_merge($params, $rooms); 
+            }
+            else if ($key === 'MinPrice'  && $filters[$key] != null){
+                $sql .= " AND flats.Price >= ?";
+                $params[] = $value; 
+            }
+            else if ($key === 'MaxPrice'  && $filters[$key] != null){
+                $sql .= " AND flats.Price <= ?";
+                $params[] = $value; 
+            }
+            else if ($key === 'MinFloor' && $filters[$key] != null){
+                $sql .= " AND flats.Floor >= ?";
+                $params[] = $value; 
+            }
+            else if ($key === 'MaxFloor' && $filters[$key] != null){
+                $sql .= " AND flats.Floor <= ?";
+                $params[] = $value; 
+            }
+        }
+
+        $orderBy = $filters['OrderBy'];
+        if ($orderBy != null){
+            if ($orderBy == 'price') $sql .= " ORDER BY flats.Price ASC";
+            else if($orderBy == '-price') $sql .= " ORDER BY flats.Price DESC";
+            else if($orderBy == 'area') $sql .= " ORDER BY flats.Area ASC";
+            else if($orderBy == '-area') $sql .= " ORDER BY flats.Area DESC";
+        }
+ 
+
+        try {
+        $db = new DB();
+        $conn = $db->connect();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $minPrice = min(array_column($flats, "Price"));
+        $maxPrice = max(array_column($flats, "Price"));
+        $minFloor = min(array_column($flats, "Floor"));
+        $maxFloor = max(array_column($flats, "Floor"));
+        $minArea = min(array_column($flats, "Area"));
+        $maxArea = max(array_column($flats, "Area"));
+     
+        $flatsWithImages = self::computeImages($flats);
+        $carry["flats"] = $flatsWithImages;
+        $carry["minPrice"] = $maxPrice;
+        $carry["maxPrice"] = $minPrice;
+        $carry["minFloor"] = $minFloor;
+        $carry["maxFloor"] = $maxFloor;
+        $carry["minArea"] = $minArea;
+        $carry["maxArea"] = $maxArea;
+        return $carry;
+        }
+        catch (PDOException $e) {
+            //echo $e->getMessage();
+            return [];
+        } finally {
+            $db = null;
+        }
     }
 
     public function Save($flat){
@@ -69,6 +174,7 @@ class FlatsRepository implements IRepository {
             'Price' => $item['Price'],
             'Number' => $item['Number'],
             'Housing' => $item['Housing'],
+            'Section' => $item['Section'],
             'Images' => []
             ];
         }

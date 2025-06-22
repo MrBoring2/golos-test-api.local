@@ -13,14 +13,22 @@ class FlatsController {
     public function GetAll(Request $request, Response $response) {
         
         $flats = $this->flatsRepository->GetAll();
-        if($flats == []){
-            return self::ErrorResponse($response,400, "Ошибка доступа к данным");
-        }
         $response->getBody()->write(json_encode($flats));
             return $response
                 ->withHeader('content-type', 'application/json')
                 ->withStatus(200);
         
+    }
+
+    public function GetAllWithFilter(Request $request, Response $response) {
+        $params = $request->getQueryParams();
+        $flats = $this->flatsRepository->getAllWithFilter($params);
+
+        $response->getBody()->write(json_encode($flats));
+            return $response
+                ->withHeader('content-type', 'application/json')
+                ->withStatus(200);
+   
     }
 
     private static function ErrorResponse(Response $response, int $code, string $text) {
@@ -30,6 +38,6 @@ class FlatsController {
         ));
         return $errorRes
                 ->withHeader('content-type', 'application/json')
-                ->withStatus(500);;
+                ->withStatus($code);;
     }
 }
