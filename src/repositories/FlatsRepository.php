@@ -123,22 +123,11 @@ class FlatsRepository implements IRepository {
         $stmt = $conn->prepare($sql);
         $stmt->execute($params);
         $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        $minPrice = min(array_column($flats, "Price"));
-        $maxPrice = max(array_column($flats, "Price"));
-        $minFloor = min(array_column($flats, "Floor"));
-        $maxFloor = max(array_column($flats, "Floor"));
-        $minArea = min(array_column($flats, "Area"));
-        $maxArea = max(array_column($flats, "Area"));
+     
      
         $flatsWithImages = self::computeImages($flats);
-        $carry["flats"] = $flatsWithImages;
-        $carry["minPrice"] = $maxPrice;
-        $carry["maxPrice"] = $minPrice;
-        $carry["minFloor"] = $minFloor;
-        $carry["maxFloor"] = $maxFloor;
-        $carry["minArea"] = $minArea;
-        $carry["maxArea"] = $maxArea;
-        return $carry;
+
+        return $flatsWithImages;
         }
         catch (PDOException $e) {
             //echo $e->getMessage();
