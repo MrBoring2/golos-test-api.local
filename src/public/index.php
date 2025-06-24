@@ -30,5 +30,6 @@ $app->get('/', function (Request $request, Response $response) {
 });
 
 $app->get('/flats', [FlatsController::class,"GetAllWithFilter"]);
+$app->get("/flats-boundary-values", [FlatsController::class, "GetStartBoundaryValues"]);
 
 $app->run();

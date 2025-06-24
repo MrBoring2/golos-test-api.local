@@ -24,19 +24,18 @@ class FlatsRepository implements IRepository {
                         images.Type as ImageType,
                         images.Path as ImagePath
                         FROM Flats flats
-                        JOIN FlatImages images ON images.FlatId = flats.Id
-                        WHERE ";
+                        JOIN FlatImages images ON images.FlatId = flats.Id";
      
         try {
         $db = new DB();
         $conn = $db->connect();
-        $stmt = $conn->prepare($sql);
+        $stmt = $conn->query($sql);
 
         $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
         return self::computeImages($flats);
         }
         catch (PDOException $e) {
-            //echo $e->getMessage();
+            echo $e->getMessage();
             return [];
         } finally {
             $db = null;
@@ -46,14 +45,14 @@ class FlatsRepository implements IRepository {
     public function GetAllWithFilter($filterArray) {
 
         $filters = [
-            'MinArea' => $filterArray['min_area'] ?? null,
-            'MaxArea' => $filterArray['max_area'] ?? null,
+            'MinArea' => $filterArray['minArea'] ?? null,
+            'MaxArea' => $filterArray['maxArea'] ?? null,
             'Rooms' => $filterArray['rooms'] ?? [],
-            'MinPrice' => $filterArray['min_price'] ?? null,
-            'MaxPrice' => $filterArray['max_price'] ?? null,
-            'MinFloor'=> $filterArray['min_floor'] ?? null,
-            'MaxFloor'=> $filterArray['max_floor'] ?? null,
-            'OrderBy' => $filterArray['order_by'] ?? null
+            'MinPrice' => $filterArray['minPrice'] ?? null,
+            'MaxPrice' => $filterArray['maxPrice'] ?? null,
+            'MinFloor'=> $filterArray['minFloor'] ?? null,
+            'MaxFloor'=> $filterArray['maxFloor'] ?? null,
+            'OrderBy' => $filterArray['orderBy'] ?? null
         ];
 
         $sql = "SELECT BIN_TO_UUID(flats.Id) as Id, 
