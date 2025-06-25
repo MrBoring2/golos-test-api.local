@@ -22,9 +22,12 @@ class FlatsRepository implements IRepository {
                         flats.Floor,
                         BIN_TO_UUID(images.Id) as ImageId,
                         images.Type as ImageType,
-                        images.Path as ImagePath
+                        images.Path as ImagePath,
+                        BIN_TO_UUID(sales.Id) as SaleId,
+                        sales.Title as SaleTitle
                         FROM Flats flats
-                        JOIN FlatImages images ON images.FlatId = flats.Id";
+                        JOIN FlatImages images ON images.FlatId = flats.Id
+                        LEFT JOIN FlatSales sales ON sales.FlatId = flats.Id WHERE 1=1";
      
         try {
         $db = new DB();
@@ -32,7 +35,7 @@ class FlatsRepository implements IRepository {
         $stmt = $conn->query($sql);
 
         $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
-        return self::computeImages($flats);
+        return self::groupData($flats);
         }
         catch (PDOException $e) {
             echo $e->getMessage();
@@ -52,6 +55,7 @@ class FlatsRepository implements IRepository {
             'MaxPrice' => $filterArray['maxPrice'] ?? null,
             'MinFloor'=> $filterArray['minFloor'] ?? null,
             'MaxFloor'=> $filterArray['maxFloor'] ?? null,
+            'Sales' => $filterArray['sales'] ?? null,
             'OrderBy' => $filterArray['orderBy'] ?? null
         ];
 
@@ -67,9 +71,12 @@ class FlatsRepository implements IRepository {
                         flats.Floor,
                         BIN_TO_UUID(images.Id) as ImageId,
                         images.Type as ImageType,
-                        images.Path as ImagePath
+                        images.Path as ImagePath,
+                        BIN_TO_UUID(sales.Id) as SaleId,
+                        sales.Title as SaleTitle
                         FROM Flats flats
-                        JOIN FlatImages images ON images.FlatId = flats.Id";
+                        JOIN FlatImages images ON images.FlatId = flats.Id
+                        LEFT JOIN FlatSales sales ON sales.FlatId = flats.Id WHERE 1=1";
 
         $params = [];
 
@@ -88,6 +95,11 @@ class FlatsRepository implements IRepository {
                 $rooms = is_array($filters['Rooms']) ? $filters['Rooms'] : [$filters['Rooms']];
                 $sql .= " AND flats.Roominess IN (" . str_repeat('?,', count($rooms) - 1) . '?)';
                 $params = array_merge($params, $rooms); 
+            }
+            else if($key === 'Sales' && !empty($filters[$key])){
+                $sales = is_array($filters['Sales']) ? $filters['Sales'] : [$filters['Sales']];
+                $sql .= ' AND sales.Title = (' . str_repeat('?,', count($sales) - 1) . '?)';
+                $params = array_merge($params, $sales);
             }
             else if ($key === 'MinPrice'  && $filters[$key] != null){
                 $sql .= " AND flats.Price >= ?";
@@ -124,7 +136,7 @@ class FlatsRepository implements IRepository {
         $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
      
      
-        $flatsWithImages = self::computeImages($flats);
+        $flatsWithImages = self::groupData($flats);
 
         return $flatsWithImages;
         }
@@ -148,36 +160,67 @@ class FlatsRepository implements IRepository {
 
     }
 
-    private static function computeImages($flats){
-        $result = array_reduce($flats, function($carry, $item) {
-        $id = $item['Id'];
+    private static function groupData($flats){
+    $grouped = [];
     
-        if (!isset($carry[$id])) {
-            $carry[$id] = [
-            'Id' => $item['Id'],
-            'Floor' => $item['Floor'],
-            'Type' => $item['Type'],
-            'Area' => $item['Area'],
-            'Roominess' => $item['Roominess'],
-            'Price' => $item['Price'],
-            'Number' => $item['Number'],
-            'Housing' => $item['Housing'],
-            'Section' => $item['Section'],
-            'Images' => []
+    foreach ($flats as $row) {
+        $flatId = $row['Id'];
+        
+        if (!isset($grouped[$flatId])) {
+            // Основные данные квартиры (без дублирования)
+            $grouped[$flatId] = [
+                'Id'        => $flatId,
+                'Floor'     => $row['Floor'],
+                'Type'      => $row['Type'],
+                'Area'      => $row['Area'],
+                'Roominess' => $row['Roominess'],
+                'Price'     => $row['Price'],
+                'Number'    => $row['Number'],
+                'Housing'  => $row['Housing'],
+                'Section'   => $row['Section'],
+                'Images'   => [],
+                'Sales'     => []
             ];
         }
-    
-        if ($item['ImageId']) {
-        $carry[$id]['Images'][] = [
-            'Id' => $item['ImageId'],
-            'Type' => $item['ImageType'],
-            'Path' => $item['ImagePath'],
-        ];
+        
+        // Добавляем изображение (если есть и еще не добавлено)
+        if ($row['ImageId'] && !self::imageExists($grouped[$flatId]['Images'], $row['ImageId'])) {
+            $grouped[$flatId]['Images'][] = [
+                'Id'   => $row['ImageId'],
+                'Type' => $row['ImageType'],
+                'Path' => $row['ImagePath']
+            ];
         }
+        
+        // Добавляем акцию (если есть и еще не добавлена)
+        if ($row['SaleId'] && !self::saleExists($grouped[$flatId]['Sales'], $row['SaleId'])) {
+            $grouped[$flatId]['Sales'][] = [
+                'Id'    => $row['SaleId'],
+                'Title' => $row['SaleTitle']
+            ];
+        }
+    }
     
-        return $carry;
-    }, []);
+    return array_values($grouped);
+    }
 
-    return array_values($result);
+    private static function imageExists(array $images, string $imageId): bool 
+    {
+    foreach ($images as $img) {
+        if ($img['Id'] === $imageId) {
+            return true;
+        }
+    }
+    return false;
+    }
+
+    private static function saleExists(array $sales, string $saleId): bool 
+    {
+    foreach ($sales as $sale) {
+        if ($sale['Id'] === $saleId) {
+            return true;
+        }
+    }
+    return false;
     }
 }

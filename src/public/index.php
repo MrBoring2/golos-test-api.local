@@ -5,6 +5,7 @@ use Psr\Http\Message\ServerRequestInterface as Request;
 use Selective\BasePath\BasePathMiddleware;
 use Slim\Factory\AppFactory;
 use Controllers\FlatsController;
+use Controllers\SalesController;
 
 require_once __DIR__ . '/../../vendor/autoload.php';
 
@@ -31,5 +32,6 @@ $app->get('/', function (Request $request, Response $response) {
 
 $app->get('/flats', [FlatsController::class,"GetAllWithFilter"]);
 $app->get("/flats-boundary-values", [FlatsController::class, "GetStartBoundaryValues"]);
+$app->get('/sales', [SalesController::class,'GetAll']);
 
 $app->run();
