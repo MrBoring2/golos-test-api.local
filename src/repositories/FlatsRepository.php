@@ -6,7 +6,46 @@ use Models\Db;
 
 class FlatsRepository implements IRepository {
     public function Get($id) {
-        return null;
+        $sql = "SELECT BIN_TO_UUID(flats.Id) as Id, 
+                        flats.Floor,
+                        flats.Type,
+                        flats.Area,
+                        flats.Roominess,
+                        flats.Price,
+                        flats.Number,
+                        flats.Housing,
+                        flats.Section,
+                        flats.Floor,
+                        BIN_TO_UUID(images.Id) as ImageId,
+                        images.Type as ImageType,
+                        images.Path as ImagePath,
+                        BIN_TO_UUID(sales.Id) as SaleId,
+                        sales.Title as SaleTitle
+                        FROM Flats flats
+                        JOIN FlatImages images ON images.FlatId = flats.Id
+                        LEFT JOIN FlatSales sales ON sales.FlatId = flats.Id
+                        WHERE flats.Id = UUID_TO_BIN(?)";
+
+        $params[] = $id;
+        try {
+        $db = new DB();
+        $conn = $db->connect();
+        $stmt = $conn->prepare($sql);
+        $stmt->execute($params);
+        $flats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+     
+     
+        $flatWithImages = self::groupData($flats);
+
+        return $flatWithImages;
+        }
+        catch (PDOException $e) {
+            //echo $e->getMessage();
+            return [];
+        } finally {
+            $db = null;
+        }
+        
     }
 
     public function GetAll(){

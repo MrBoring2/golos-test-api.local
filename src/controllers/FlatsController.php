@@ -10,6 +10,16 @@ class FlatsController {
     public function __construct() {
         $this->flatsRepository = new FlatsRepository();
     }
+
+    public function Get(Request $request, Response $response, array $args) {
+        $id =  $args['id'];
+        $flat = $this->flatsRepository->Get($id);
+        $response->getBody()->write(json_encode($flat));
+            return $response
+                ->withHeader('content-type', 'application/json')
+                ->withStatus(200);
+    }
+
     public function GetAll(Request $request, Response $response) {
         
         $flats = $this->flatsRepository->GetAll();
