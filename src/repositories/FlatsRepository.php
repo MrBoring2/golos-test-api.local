@@ -137,7 +137,11 @@ class FlatsRepository implements IRepository {
             }
             else if($key === 'Sales' && !empty($filters[$key])){
                 $sales = is_array($filters['Sales']) ? $filters['Sales'] : [$filters['Sales']];
-                $sql .= ' AND sales.Title = (' . str_repeat('?,', count($sales) - 1) . '?)';
+                $sql .= ' AND flats.Id IN (
+                            SELECT DISTINCT sales.FlatId 
+                            FROM FlatSales sales 
+                            WHERE sales.Title IN (' . str_repeat('?,', count($sales) - 1) . '?)
+                        )';
                 $params = array_merge($params, $sales);
             }
             else if ($key === 'MinPrice'  && $filters[$key] != null){
